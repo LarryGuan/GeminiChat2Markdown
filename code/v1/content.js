@@ -1,5 +1,210 @@
 // content.js
 
+// Function to convert HTML element to Markdown
+function htmlToMarkdown(element) {
+  if (!element) return '';
+  
+  const clonedElement = element.cloneNode(true);
+  
+  // First, extract and preserve code blocks
+  const codeBlocks = clonedElement.querySelectorAll('pre, code');
+  const codeBlockData = [];
+  codeBlocks.forEach((block, index) => {
+    const placeholder = `__CODE_BLOCK_${index}__`;
+    let markdown = '';
+    if (block.tagName === 'PRE') {
+      // Check if pre contains a code element
+      const codeElement = block.querySelector('code');
+      const codeText = codeElement ? codeElement.innerText : block.innerText;
+      markdown = `\n\`\`\`\n${codeText}\n\`\`\`\n`;
+    } else if (block.tagName === 'CODE') {
+      markdown = `\`${block.innerText}\``;
+    }
+    codeBlockData.push(markdown);
+    block.replaceWith(document.createTextNode(placeholder));
+  });
+  
+  // Convert other HTML elements to Markdown
+  let markdown = convertElementToMarkdown(clonedElement);
+  
+  // Restore code blocks
+  codeBlockData.forEach((codeMarkdown, index) => {
+    const placeholder = `__CODE_BLOCK_${index}__`;
+    markdown = markdown.replace(placeholder, codeMarkdown);
+  });
+  
+  // Clean up and fix backtick issues
+  markdown = fixBacktickIssues(markdown);
+  
+  return markdown.trim();
+}
+
+// Function to convert HTML element to Markdown recursively
+function convertElementToMarkdown(element) {
+  let result = '';
+  
+  for (const node of element.childNodes) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      result += node.textContent;
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const tagName = node.tagName.toLowerCase();
+      const text = node.textContent;
+      
+      switch (tagName) {
+        case 'h1':
+          result += `\n# ${text}\n`;
+          break;
+        case 'h2':
+          result += `\n## ${text}\n`;
+          break;
+        case 'h3':
+          result += `\n### ${text}\n`;
+          break;
+        case 'h4':
+          result += `\n#### ${text}\n`;
+          break;
+        case 'h5':
+          result += `\n##### ${text}\n`;
+          break;
+        case 'h6':
+          result += `\n###### ${text}\n`;
+          break;
+        case 'p':
+          result += `\n${convertElementToMarkdown(node)}\n`;
+          break;
+        case 'br':
+          result += '\n';
+          break;
+        case 'strong':
+        case 'b':
+          result += `**${text}**`;
+          break;
+        case 'em':
+        case 'i':
+          result += `*${text}*`;
+          break;
+        case 'ul':
+          result += convertListToMarkdown(node, false);
+          break;
+        case 'ol':
+          result += convertListToMarkdown(node, true);
+          break;
+        case 'li':
+          // This will be handled by the list converter
+          result += convertElementToMarkdown(node);
+          break;
+        case 'a':
+          const href = node.getAttribute('href');
+          if (href) {
+            result += `[${text}](${href})`;
+          } else {
+            result += text;
+          }
+          break;
+        case 'img':
+          const src = node.getAttribute('src');
+          const alt = node.getAttribute('alt') || '';
+          if (src) {
+            result += `![${alt}](${src})`;
+          }
+          break;
+        case 'table':
+          result += convertTableToMarkdown(node);
+          break;
+        case 'blockquote':
+          const lines = text.split('\n');
+          result += '\n' + lines.map(line => `> ${line}`).join('\n') + '\n';
+          break;
+        default:
+          result += convertElementToMarkdown(node);
+          break;
+      }
+    }
+  }
+  
+  return result;
+}
+
+// Function to convert list to Markdown
+function convertListToMarkdown(listElement, isOrdered) {
+  let result = '\n';
+  const items = listElement.querySelectorAll('li');
+  
+  items.forEach((item, index) => {
+    const prefix = isOrdered ? `${index + 1}. ` : '- ';
+    const itemText = convertElementToMarkdown(item).trim();
+    result += `${prefix}${itemText}\n`;
+  });
+  
+  return result + '\n';
+}
+
+// Function to convert table to Markdown
+function convertTableToMarkdown(tableElement) {
+  let result = '\n';
+  const rows = tableElement.querySelectorAll('tr');
+  
+  rows.forEach((row, rowIndex) => {
+    const cells = row.querySelectorAll('td, th');
+    const cellTexts = Array.from(cells).map(cell => cell.textContent.trim());
+    result += `| ${cellTexts.join(' | ')} |\n`;
+    
+    // Add header separator for the first row
+    if (rowIndex === 0) {
+      const separator = cellTexts.map(() => '---').join(' | ');
+      result += `| ${separator} |\n`;
+    }
+  });
+  
+  return result + '\n';
+}
+
+// Function to fix backtick issues in text (excluding code blocks)
+function fixBacktickIssues(text) {
+  // Split text by code blocks to avoid processing backticks inside them
+  const codeBlockRegex = /(```[\s\S]*?```|`[^`]*`)/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+  
+  while ((match = codeBlockRegex.exec(text)) !== null) {
+    // Add text before code block
+    if (match.index > lastIndex) {
+      parts.push({ type: 'text', content: text.slice(lastIndex, match.index) });
+    }
+    // Add code block
+    parts.push({ type: 'code', content: match[0] });
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push({ type: 'text', content: text.slice(lastIndex) });
+  }
+  
+  // Process only text parts to fix unpaired backticks
+  return parts.map(part => {
+    if (part.type === 'text') {
+      return fixUnpairedBackticks(part.content);
+    }
+    return part.content;
+  }).join('');
+}
+
+// Function to fix unpaired backticks in text
+function fixUnpairedBackticks(text) {
+  // Count triple backticks
+  const tripleBacktickMatches = text.match(/```/g);
+  const tripleBacktickCount = tripleBacktickMatches ? tripleBacktickMatches.length : 0;
+  
+  // If odd number of triple backticks, add a closing one at the end
+  if (tripleBacktickCount % 2 !== 0) {
+    text = text.trim() + '\n```';
+  }
+  
+  return text;
+}
+
 // Function to extract chat data
 function extractChatData() {
   const chatTurns = document.querySelectorAll('share-turn-viewer');
@@ -12,62 +217,27 @@ function extractChatData() {
     if (userQuery) {
       const userTextElement = userQuery.querySelector('.query-text');
       if (userTextElement) {
-        const clonedUserTextElement = userTextElement.cloneNode(true);
-        const codeBlocks = clonedUserTextElement.querySelectorAll('pre, code');
-        let codeBlockMarkdown = [];
-        codeBlocks.forEach((block, index) => {
-          const placeholder = `CODE_BLOCK_PLACEHOLDER_USER_${index}`;
-          if (block.tagName === 'PRE') {
-            codeBlockMarkdown.push(`\n\`\`\`\n${block.innerText}\n\`\`\`\n`);
-          } else if (block.tagName === 'CODE') {
-            codeBlockMarkdown.push(`\`${block.innerText}\` `);
-          }
-          block.replaceWith(document.createTextNode(placeholder));
-        });
-
-        let textContent = clonedUserTextElement.innerText || '';
-
-        codeBlockMarkdown.forEach((md, index) => {
-          const placeholder = `CODE_BLOCK_PLACEHOLDER_USER_${index}`;
-          textContent = textContent.replace(placeholder, md);
-        });
-        chatData.push({ speaker: 'User', text: textContent.trim() });
+        const markdownText = htmlToMarkdown(userTextElement);
+        chatData.push({ speaker: 'User', text: markdownText });
       }
     }
 
     if (responseContainer) {
       const responsePanel = responseContainer.querySelector('.markdown.markdown-main-panel');
       if (responsePanel) {
-        // Clone the response panel to manipulate it without affecting the original DOM
-        const clonedResponsePanel = responsePanel.cloneNode(true);
-
-        // Extract and replace code blocks with placeholders
-        const codeBlocks = clonedResponsePanel.querySelectorAll('pre, code');
-        let codeBlockMarkdown = [];
-        codeBlocks.forEach((block, index) => {
-          const placeholder = `CODE_BLOCK_PLACEHOLDER_${index}`;
-          if (block.tagName === 'PRE') {
-            codeBlockMarkdown.push(`\n\`\`\`\n${block.innerText}\n\`\`\`\n`);
-          } else if (block.tagName === 'CODE') {
-            codeBlockMarkdown.push(`\`${block.innerText}\` `);
-          }
-          block.replaceWith(document.createTextNode(placeholder));
-        });
-
-        // Get the remaining text content
-        let textContent = clonedResponsePanel.innerText || '';
-
-        // Replace placeholders with actual markdown code blocks
-        codeBlockMarkdown.forEach((md, index) => {
-          const placeholder = `CODE_BLOCK_PLACEHOLDER_${index}`;
-          textContent = textContent.replace(placeholder, md);
-        });
-        chatData.push({ speaker: 'Gemini', text: textContent.trim() });
+        const markdownText = htmlToMarkdown(responsePanel);
+        chatData.push({ speaker: 'Gemini', text: markdownText });
       }
     }
   });
 
   return chatData;
+}
+
+// Function to clean up multiple consecutive empty lines
+function cleanupMultipleEmptyLines(text) {
+  // Replace multiple consecutive empty lines with a single empty line
+  return text.replace(/\n\s*\n\s*\n+/g, '\n\n');
 }
 
 // Function to convert chat data to Markdown
@@ -96,12 +266,20 @@ function convertToMarkdown(chatData) {
   markdown += `---\n\n`;
 
   chatData.forEach(item => {
+    let processedText = item.text;
+    
+    // Fix unpaired backticks for each conversation turn
+    processedText = fixUnpairedBackticks(processedText);
+    
     if (item.speaker === 'User') {
-      markdown += `## User\n${item.text}\n\n`;
+      markdown += `## User\n${processedText}\n\n`;
     } else if (item.speaker === 'Gemini') {
-      markdown += `## Gemini\n${item.text}\n\n`;
+      markdown += `## Gemini\n${processedText}\n\n`;
     }
   });
+
+  // Clean up multiple consecutive empty lines
+  markdown = cleanupMultipleEmptyLines(markdown);
 
   return markdown;
 }
