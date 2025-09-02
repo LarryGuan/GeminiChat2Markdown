@@ -1,3 +1,12 @@
+// 初始化国际化文本
+function initializeI18n() {
+  document.getElementById('downloadText').textContent = chrome.i18n.getMessage('downloadButton');
+  document.getElementById('copyText').textContent = chrome.i18n.getMessage('copyButton');
+}
+
+// 页面加载时初始化
+document.addEventListener('DOMContentLoaded', initializeI18n);
+
 // 下载 Markdown 功能
 document.getElementById('downloadButton').addEventListener('click', () => {
   chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
@@ -14,18 +23,18 @@ document.getElementById('downloadButton').addEventListener('click', () => {
             // Send the markdown content to the background script for download
             chrome.runtime.sendMessage({ action: 'downloadMarkdown', content: response.markdownContent });
             const statusEl = document.getElementById('status');
-            statusEl.textContent = '✅ Markdown 文件已下载！';
+            statusEl.textContent = chrome.i18n.getMessage('downloadSuccess');
             statusEl.className = 'status-success show';
           } else {
             const statusEl = document.getElementById('status');
-             statusEl.textContent = '❌ 获取 Markdown 内容失败。';
+             statusEl.textContent = chrome.i18n.getMessage('extractionFailed');
              statusEl.className = 'status-error show';
           }
         });
       });
     } else {
       const statusEl = document.getElementById('status');
-        statusEl.textContent = 'ℹ️ 请打开 Gemini 分享页面。';
+        statusEl.textContent = chrome.i18n.getMessage('openGeminiShare');
         statusEl.className = 'status-info show';
     }
   });
@@ -47,24 +56,24 @@ document.getElementById('copyButton').addEventListener('click', () => {
             // Copy to clipboard
             navigator.clipboard.writeText(response.markdownContent).then(() => {
               const statusEl = document.getElementById('status');
-              statusEl.textContent = '📋 Markdown 已复制到剪贴板！';
+              statusEl.textContent = chrome.i18n.getMessage('copySuccess');
               statusEl.className = 'status-success show';
             }).catch(err => {
               console.error('复制失败:', err);
               const statusEl = document.getElementById('status');
-           statusEl.textContent = '❌ 复制失败，请重试。';
+           statusEl.textContent = chrome.i18n.getMessage('extractionFailed');
            statusEl.className = 'status-error show';
             });
           } else {
             const statusEl = document.getElementById('status');
-            statusEl.textContent = '❌ 获取 Markdown 内容失败。';
+            statusEl.textContent = chrome.i18n.getMessage('extractionFailed');
             statusEl.className = 'status-error show';
            }
          });
        });
      } else {
        const statusEl = document.getElementById('status');
-       statusEl.textContent = 'ℹ️ 请打开 Gemini 分享页面。';
+       statusEl.textContent = chrome.i18n.getMessage('openGeminiShare');
        statusEl.className = 'status-info show';
     }
   });

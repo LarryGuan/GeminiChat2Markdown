@@ -1,0 +1,34 @@
+{
+  "extensionName": {
+    "message": "Gemini Chat to Markdown Converter",
+    "description": "Name of the extension"
+  },
+  "extensionDescription": {
+    "message": "Converts shared Gemini chat records into a question-and-answer Markdown format.",
+    "description": "Description of the extension"
+  },
+  "downloadButton": {
+    "message": "Download | Markdown",
+    "description": "Text for the download button"
+  },
+  "copyButton": {
+    "message": "Copy | Markdown",
+    "description": "Text for the copy button"
+  },
+  "downloadSuccess": {
+    "message": "✅ Markdown file downloaded!",
+    "description": "Success message for download"
+  },
+  "copySuccess": {
+    "message": "📋 Markdown copied to clipboard!",
+    "description": "Success message for copy"
+  },
+  "extractionFailed": {
+    "message": "❌ Failed to extract content. Please make sure you are on a Gemini share page.",
+    "description": "Error message when content extraction fails"
+  },
+  "openGeminiShare": {
+    "message": "🔗 Please open a Gemini share page first!",
+    "description": "Message when not on a Gemini share page"
+  }
+}

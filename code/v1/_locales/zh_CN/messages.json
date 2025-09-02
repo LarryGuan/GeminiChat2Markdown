@@ -1,0 +1,34 @@
+{
+  "extensionName": {
+    "message": "Gemini对话转Markdown工具",
+    "description": "扩展程序名称"
+  },
+  "extensionDescription": {
+    "message": "将Gemini共享对话记录转换为问答格式的Markdown文件。",
+    "description": "扩展程序描述"
+  },
+  "downloadButton": {
+    "message": "下载 | Markdown",
+    "description": "下载按钮文本"
+  },
+  "copyButton": {
+    "message": "复制 | Markdown",
+    "description": "复制按钮文本"
+  },
+  "downloadSuccess": {
+    "message": "✅ Markdown 文件已下载！",
+    "description": "下载成功提示"
+  },
+  "copySuccess": {
+    "message": "📋 Markdown 已复制到剪贴板！",
+    "description": "复制成功提示"
+  },
+  "extractionFailed": {
+    "message": "❌ 内容提取失败，请确保您在Gemini共享页面上。",
+    "description": "内容提取失败时的错误信息"
+  },
+  "openGeminiShare": {
+    "message": "🔗 请先打开Gemini共享页面！",
+    "description": "不在Gemini共享页面时的提示信息"
+  }
+}
