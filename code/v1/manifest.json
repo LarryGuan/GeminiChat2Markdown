@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Gemini Chat to Markdown Converter",
+  "version": "1.0",
+  "description": "Converts shared Gemini chat records into a question-and-answer Markdown format.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "downloads"
+  ],
+  "host_permissions": [
+    "https://gemini.google.com/share/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/icon16.png",
+      "48": "images/icon48.png",
+      "128": "images/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://gemini.google.com/share/*"],
+      "js": ["content.js"]
+    }
+  ]
+}
