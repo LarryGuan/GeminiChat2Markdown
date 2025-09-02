@@ -10,13 +10,60 @@ function extractChatData() {
     const responseContainer = turn.querySelector('response-container');
 
     if (userQuery) {
-      const userText = userQuery.querySelector('.query-text')?.innerText || '';
-      chatData.push({ speaker: 'User', text: userText });
+      const userTextElement = userQuery.querySelector('.query-text');
+      if (userTextElement) {
+        const clonedUserTextElement = userTextElement.cloneNode(true);
+        const codeBlocks = clonedUserTextElement.querySelectorAll('pre, code');
+        let codeBlockMarkdown = [];
+        codeBlocks.forEach((block, index) => {
+          const placeholder = `CODE_BLOCK_PLACEHOLDER_USER_${index}`;
+          if (block.tagName === 'PRE') {
+            codeBlockMarkdown.push(`\n\`\`\`\n${block.innerText}\n\`\`\`\n`);
+          } else if (block.tagName === 'CODE') {
+            codeBlockMarkdown.push(`\`${block.innerText}\` `);
+          }
+          block.replaceWith(document.createTextNode(placeholder));
+        });
+
+        let textContent = clonedUserTextElement.innerText || '';
+
+        codeBlockMarkdown.forEach((md, index) => {
+          const placeholder = `CODE_BLOCK_PLACEHOLDER_USER_${index}`;
+          textContent = textContent.replace(placeholder, md);
+        });
+        chatData.push({ speaker: 'User', text: textContent.trim() });
+      }
     }
 
     if (responseContainer) {
-      const responseText = responseContainer.querySelector('.markdown.markdown-main-panel')?.innerText || '';
-      chatData.push({ speaker: 'Gemini', text: responseText });
+      const responsePanel = responseContainer.querySelector('.markdown.markdown-main-panel');
+      if (responsePanel) {
+        // Clone the response panel to manipulate it without affecting the original DOM
+        const clonedResponsePanel = responsePanel.cloneNode(true);
+
+        // Extract and replace code blocks with placeholders
+        const codeBlocks = clonedResponsePanel.querySelectorAll('pre, code');
+        let codeBlockMarkdown = [];
+        codeBlocks.forEach((block, index) => {
+          const placeholder = `CODE_BLOCK_PLACEHOLDER_${index}`;
+          if (block.tagName === 'PRE') {
+            codeBlockMarkdown.push(`\n\`\`\`\n${block.innerText}\n\`\`\`\n`);
+          } else if (block.tagName === 'CODE') {
+            codeBlockMarkdown.push(`\`${block.innerText}\` `);
+          }
+          block.replaceWith(document.createTextNode(placeholder));
+        });
+
+        // Get the remaining text content
+        let textContent = clonedResponsePanel.innerText || '';
+
+        // Replace placeholders with actual markdown code blocks
+        codeBlockMarkdown.forEach((md, index) => {
+          const placeholder = `CODE_BLOCK_PLACEHOLDER_${index}`;
+          textContent = textContent.replace(placeholder, md);
+        });
+        chatData.push({ speaker: 'Gemini', text: textContent.trim() });
+      }
     }
   });
 
