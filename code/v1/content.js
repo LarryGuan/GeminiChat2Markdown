@@ -48,7 +48,13 @@ function convertElementToMarkdown(element) {
       result += node.textContent;
     } else if (node.nodeType === Node.ELEMENT_NODE) {
       const tagName = node.tagName.toLowerCase();
+      const className = node.getAttribute('class') || '';
       const text = node.textContent;
+      
+      // Skip elements with accessibility/hidden classes
+      if (className.includes('cdk-visually-hidden')) {
+        continue;
+      }
       
       switch (tagName) {
         case 'h1':
@@ -95,6 +101,12 @@ function convertElementToMarkdown(element) {
           break;
         case 'a':
           const href = node.getAttribute('href');
+          const className = node.getAttribute('class') || '';
+          // Skip links related to image upload functionality (like Google Lens)
+          if (className.includes('lens-icon-container')) {
+            // Completely skip lens-related links and their content
+            break;
+          }
           if (href) {
             result += `[${text}](${href})`;
           } else {
@@ -104,7 +116,9 @@ function convertElementToMarkdown(element) {
         case 'img':
           const src = node.getAttribute('src');
           const alt = node.getAttribute('alt') || '';
-          if (src) {
+          const dataTestId = node.getAttribute('data-test-id');
+          // Only process images with 'uploaded-img' in data-test-id attribute
+          if (src && dataTestId && dataTestId.includes('uploaded-img')) {
             result += `![${alt}](${src})`;
           }
           break;
@@ -215,9 +229,14 @@ function extractChatData() {
     const responseContainer = turn.querySelector('response-container');
 
     if (userQuery) {
-      const userTextElement = userQuery.querySelector('.query-text');
-      if (userTextElement) {
-        const markdownText = htmlToMarkdown(userTextElement);
+      // First try to find user-query-content (for queries with files)
+      let userContentElement = userQuery.querySelector('user-query-content');
+      // If not found, fall back to .query-text (for text-only queries)
+      if (!userContentElement) {
+        userContentElement = userQuery.querySelector('.query-text');
+      }
+      if (userContentElement) {
+        const markdownText = htmlToMarkdown(userContentElement);
         chatData.push({ speaker: 'User', text: markdownText });
       }
     }
