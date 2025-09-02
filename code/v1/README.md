@@ -1,43 +1,158 @@
-# Gemini Chat to Markdown Converter
+# 🚀 Gemini Chat to Markdown Converter
 
-This Chrome extension allows you to convert shared Gemini chat records into a clean, question-and-answer formatted Markdown file.
+一个强大的Chrome扩展程序，可以将Gemini共享对话记录转换为清晰、结构化的Markdown格式文件。
 
-## Features
+## ✨ 主要功能
 
-- Extracts user queries and Gemini responses from shared Gemini chat pages.
-- Converts the extracted content into a structured Markdown format.
-- Automatically generates a filename based on the chat title and current date/time.
-- Prompts you to choose a download location for the Markdown file.
+- **智能内容提取**：从Gemini共享页面精确提取用户查询和AI回复
+- **双重输出方式**：
+  - 📥 **下载功能**：生成Markdown文件并保存到本地
+  - 📋 **复制功能**：直接复制Markdown内容到剪贴板
+- **智能文件命名**：基于对话标题和时间戳自动生成文件名
+- **内容优化**：
+  - 自动过滤辅助性文本（如"在新窗口中打开"）
+  - 保留代码块、图片和链接的完整格式
+  - 去除冗余的"Gemini"前缀
+- **现代化UI**：美观的渐变设计，带图标的按钮和状态提示
 
-## Installation
+## 📦 安装方法
 
-1.  **Download the extension:** Clone or download this repository to your local machine.
-2.  **Open Chrome Extensions page:**
-    *   Open Chrome browser.
-    *   Type `chrome://extensions` in the address bar and press Enter.
-    *   Alternatively, click on the three-dot menu (⋮) in the top-right corner, go to `More tools`, and then click `Extensions`.
-3.  **Enable Developer mode:**
-    *   On the Extensions page, toggle on the `Developer mode` switch located in the top-right corner.
-4.  **Load the unpacked extension:**
-    *   Click on the `Load unpacked` button that appears after enabling Developer mode.
-    *   Navigate to the directory where you cloned/downloaded this repository (`GeminiChat2Markdown`).
-    *   Select the folder and click `Select`.
-5.  **Extension is installed:** The "Gemini Chat to Markdown Converter" extension should now appear in your list of installed extensions.
+### 方式一：开发者模式安装（推荐）
 
-## Usage
+1. **下载扩展程序**
+   ```bash
+   git clone https://github.com/your-username/GeminiChat2Markdown.git
+   # 或直接下载ZIP文件并解压
+   ```
 
-1.  **Navigate to a Gemini Share Page:** Go to any shared Gemini chat page (e.g., `https://gemini.google.com/share/...`).
-2.  **Click the Extension Icon:** Click on the "Gemini Chat to Markdown Converter" icon in your Chrome toolbar.
-3.  **Click "Convert to Markdown":** In the popup, click the "Convert to Markdown" button.
-4.  **Save the File:** A download prompt will appear, allowing you to choose where to save your Markdown file. The filename will be automatically generated based on the chat title and timestamp.
+2. **打开Chrome扩展管理页面**
+   - 在地址栏输入 `chrome://extensions/` 并回车
+   - 或点击Chrome菜单 → 更多工具 → 扩展程序
 
-## Development Notes
+3. **启用开发者模式**
+   - 在扩展程序页面右上角，打开"开发者模式"开关
 
-*   **Icons:** The `images/` directory contains placeholder PNG files. **You MUST replace these with actual PNG image files** of the appropriate sizes (16x16, 48x48, 128x128 pixels) for the extension to load correctly. Chrome extensions do not support SVG icons directly for `action` icons.
-*   **Reload Extension:** If you encounter errors like 'Could not load icon...' after updating the `manifest.json` or replacing icon files, please ensure you have reloaded the extension on the `chrome://extensions` page.
-*   **Content Script:** The `content.js` script is injected into the Gemini share page to extract chat data. It relies on specific HTML structures (`<share-turn-viewer>`, `<user-query>`, `<response-container>`, `.query-text`, `.markdown.markdown-main-panel`). If Gemini's HTML structure changes, this script may need updates.
-*   **Background Script:** The `background.js` handles messages from the content script and manages the file download process.
+4. **加载扩展程序**
+   - 点击"加载已解压的扩展程序"按钮
+   - 选择项目中的 `code/v1` 文件夹
+   - 点击"选择文件夹"
 
-## License
+5. **安装完成**
+   - "Gemini Chat to Markdown Converter"扩展程序将出现在扩展列表中
+   - 扩展图标会显示在Chrome工具栏中
 
-This project is open source and available under the [MIT License](LICENSE). (Note: A `LICENSE` file is not included in this initial setup, but it's good practice to add one.)
+## 🎯 使用方法
+
+### 基本操作流程
+
+1. **访问Gemini共享页面**
+   - 打开任意Gemini共享对话页面
+   - URL格式通常为：`https://gemini.google.com/share/...`
+
+2. **启动扩展程序**
+   - 点击Chrome工具栏中的扩展图标
+   - 弹出窗口将显示两个操作按钮
+
+3. **选择操作方式**
+   
+   **📥 下载为文件**
+   - 点击"下载 Markdown"按钮
+   - 系统将自动提取对话内容并生成Markdown文件
+   - 选择保存位置完成下载
+   
+   **📋 复制到剪贴板**
+   - 点击"复制 Markdown"按钮
+   - Markdown内容将直接复制到剪贴板
+   - 可以粘贴到任何文本编辑器中
+
+### 文件命名规则
+
+生成的文件名格式：`GeminiChatRecord-YYYYMMDD_HHMMSS-对话标题.md`
+
+示例：`GeminiChatRecord-20241201_143022-Python编程技巧.md`
+
+## 📋 输出格式示例
+
+转换后的Markdown文件将包含以下结构：
+
+```markdown
+# 对话标题
+
+## 用户
+用户的问题或查询内容...
+
+## Gemini
+Gemini的回复内容，包括：
+- 文本回复
+- 代码块（保持原有格式）
+- 链接和引用
+- 列表和表格
+
+## 用户
+后续的用户问题...
+
+## Gemini
+对应的Gemini回复...
+```
+
+## 🔧 故障排除
+
+### 常见问题
+
+**Q: 扩展图标不显示怎么办？**
+A: 请确保已正确加载扩展程序，并在 `chrome://extensions/` 页面重新加载扩展。
+
+**Q: 无法提取对话内容？**
+A: 
+- 确保当前页面是Gemini共享页面
+- 检查页面是否完全加载完成
+- 尝试刷新页面后重新操作
+
+**Q: 下载的文件为空？**
+A: 可能是页面结构发生变化，请检查控制台是否有错误信息。
+
+**Q: 复制功能不工作？**
+A: 请确保浏览器允许扩展程序访问剪贴板权限。
+
+## 🛠️ 开发说明
+
+### 项目结构
+```
+code/v1/
+├── manifest.json          # 扩展程序配置文件
+├── popup.html            # 弹出窗口界面
+├── popup.js              # 弹出窗口逻辑
+├── content.js            # 内容脚本（页面注入）
+├── background.js         # 后台脚本
+└── images/               # 图标文件
+    ├── icon16.png
+    ├── icon48.png
+    ├── icon128.png
+    └── icon.svg
+```
+
+### 技术实现
+
+- **内容脚本**：注入到Gemini页面，提取对话数据
+- **后台脚本**：处理文件下载和消息传递
+- **弹出界面**：提供用户交互界面
+- **权限管理**：最小化权限原则，仅请求必要权限
+
+### 自定义开发
+
+如需修改提取逻辑，主要关注 `content.js` 中的选择器：
+- `share-turn-viewer`：对话轮次容器
+- `user-query`：用户查询内容
+- `response-container`：AI回复容器
+
+## 📄 许可证
+
+本项目采用 MIT 许可证开源。详情请参阅 [LICENSE](LICENSE) 文件。
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request 来改进这个项目！
+
+---
+
+**享受使用 Gemini Chat to Markdown Converter！** 🎉
