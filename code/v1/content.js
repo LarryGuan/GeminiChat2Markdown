@@ -242,10 +242,18 @@ function extractChatData() {
     }
 
     if (responseContainer) {
-      const responsePanel = responseContainer.querySelector('.markdown.markdown-main-panel');
-      if (responsePanel) {
-        const markdownText = htmlToMarkdown(responsePanel);
+      // 首先尝试查找message-content元素（用于包含文档或特殊内容的响应）
+      const messageContent = responseContainer.querySelector('message-content[data-test-id="immersive-artifact-content"]');
+      if (messageContent) {
+        const markdownText = htmlToMarkdown(messageContent);
         chatData.push({ speaker: 'Gemini', text: markdownText });
+      } else {
+        // 如果没有找到message-content，则回退到常规的markdown面板
+        const responsePanel = responseContainer.querySelector('.markdown.markdown-main-panel');
+        if (responsePanel) {
+          const markdownText = htmlToMarkdown(responsePanel);
+          chatData.push({ speaker: 'Gemini', text: markdownText });
+        }
       }
     }
   });
