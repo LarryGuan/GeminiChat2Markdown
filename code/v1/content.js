@@ -261,6 +261,39 @@ function extractChatData() {
   return chatData;
 }
 
+// Function to downgrade markdown headers to avoid conflicts with document structure
+function downgradeHeaders(text) {
+  // 智能降级：根据内容中的最高标题级别动态调整降级幅度
+  
+  // 1. 检测内容中的最高标题级别（包括前面有空格的标题）
+  const headerMatches = text.match(/^\s*(#{1,6})\s+/gm);
+  if (!headerMatches) {
+    return text; // 没有标题，直接返回
+  }
+  
+  // 找到最高级别（最少的#数量）
+  const minLevel = Math.min(...headerMatches.map(match => {
+    const hashes = match.match(/^\s*(#{1,6})/)[1];
+    return hashes.length;
+  }));
+  
+  // 2. 计算安全的降级幅度
+  // 确保最高级别的标题降级后不会超过6级
+  // 同时为文档结构预留空间（## User, ## Gemini 占用2-3级）
+  const safeStartLevel = 4; // 从4级开始，为文档结构预留1-3级
+  const downgradeAmount = safeStartLevel - minLevel;
+  
+  // 3. 如果原内容标题级别已经很低，则减少降级幅度
+  const finalDowngradeAmount = Math.max(0, Math.min(downgradeAmount, 6 - minLevel));
+  
+  // 4. 应用智能降级（处理前面有空格的标题）
+  return text.replace(/^(\s*)(#{1,6})(\s+)/gm, (match, leadingSpaces, hashes, trailingSpaces) => {
+    const currentLevel = hashes.length;
+    const newLevel = Math.min(currentLevel + finalDowngradeAmount, 6);
+    return leadingSpaces + '#'.repeat(newLevel) + trailingSpaces;
+  });
+}
+
 // Function to clean up multiple consecutive empty lines
 function cleanupMultipleEmptyLines(text) {
   // Replace multiple consecutive empty lines with a single empty line
@@ -274,6 +307,8 @@ function convertToMarkdown(chatData) {
   // Extract title and creation time from the page
   // Extract title from document.title and clean it for filename usage
   let title = document.title.replace(/\s*-\s*Gemini$/i, '').trim(); // Remove " - Gemini" suffix
+  // Remove "Gemini" prefix if it exists (including "Gemini_" and "Gemini ")
+  title = title.replace(/^Gemini[_\s]*/i, '');
   if (!title) {
     title = 'Gemini Chat Record';
   }
@@ -297,6 +332,9 @@ function convertToMarkdown(chatData) {
     
     // Fix unpaired backticks for each conversation turn
     processedText = fixUnpairedBackticks(processedText);
+    
+    // Downgrade headers in content to avoid conflicts with document structure
+    processedText = downgradeHeaders(processedText);
     
     if (item.speaker === 'User') {
       markdown += `## User\n${processedText}\n\n`;

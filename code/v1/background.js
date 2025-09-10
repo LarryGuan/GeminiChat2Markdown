@@ -17,8 +17,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Extract title from markdown content (first line after #) and clean it
     const titleMatch = markdownContent.match(/^#\s*(.+?)\n/);
     let title = titleMatch ? titleMatch[1].trim() : 'Untitled';
-    // Remove "Gemini" prefix if it exists
-    title = title.replace(/^Gemini\s*/i, '');
+    // Remove "Gemini" prefix if it exists (including "Gemini_" and "Gemini ")
+    title = title.replace(/^Gemini[_\s]*/i, '');
     // Clean title for filename: remove special characters, keep only alphanumeric, Chinese, and spaces
     title = title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5\s]/g, '').trim();
     // Replace multiple spaces with a single underscore

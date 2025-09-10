@@ -12,7 +12,7 @@
 
 ### 3.1 对话内容抓取
 
-- 插件能够从 Gemini 分享页面（例如：`https://gemini.google.com/share/17aa16c24f42`）抓取完整的对话内容。
+- 插件能够从 Gemini 分享页面（例如：`https://gemini.google.com/share/17aa1***4f42`）抓取完整的对话内容。
 - 考虑到 Gemini 页面可能存在动态加载内容的情况，插件需要具备处理滚动加载、等待内容完全加载等机制，以确保抓取到所有对话。
 
 ### 3.2 HTML 到 Markdown 转换
