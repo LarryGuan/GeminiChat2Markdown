@@ -308,12 +308,14 @@ function convertToMarkdown(chatData) {
   // Extract title from document.title and clean it for filename usage
   let title = document.title.replace(/\s*-\s*Gemini$/i, '').trim(); // Remove " - Gemini" suffix
   // Remove "Gemini" prefix if it exists (including "Gemini_" and "Gemini ")
-  title = title.replace(/^Gemini[_\s]*/i, '');
+  title = title.replace(/^Gemini[_\s-]*/i, '').trim();
   if (!title) {
     title = 'Gemini Chat Record';
   }
   // Clean title for filename: remove special characters, keep only alphanumeric, Chinese, and spaces
   title = title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5\s]/g, '').trim();
+  // Remove any remaining "Gemini" at the beginning after cleaning
+  title = title.replace(/^Gemini\s*/i, '').trim();
   // Replace multiple spaces with a single underscore
   title = title.replace(/\s+/g, '_');
 
