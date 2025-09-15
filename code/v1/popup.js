@@ -1,7 +1,11 @@
-// 初始化国际化文本
+// 初始化国际化文本和版本号
 function initializeI18n() {
   document.getElementById('downloadText').textContent = chrome.i18n.getMessage('downloadButton');
   document.getElementById('copyText').textContent = chrome.i18n.getMessage('copyButton');
+  
+  // 获取并显示版本号
+  const manifest = chrome.runtime.getManifest();
+  document.getElementById('version').textContent = manifest.version;
 }
 
 // 页面加载时初始化
