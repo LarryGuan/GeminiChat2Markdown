@@ -7,22 +7,48 @@ function htmlToMarkdown(element) {
   const clonedElement = element.cloneNode(true);
   
   // First, extract and preserve code blocks
-  const codeBlocks = clonedElement.querySelectorAll('pre, code');
+  // Use a more robust way to find code blocks that aren't nested
   const codeBlockData = [];
-  codeBlocks.forEach((block, index) => {
-    const placeholder = `__CODE_BLOCK_${index}__`;
-    let markdown = '';
-    if (block.tagName === 'PRE') {
-      // Check if pre contains a code element
-      const codeElement = block.querySelector('code');
-      const codeText = codeElement ? codeElement.innerText : block.innerText;
-      markdown = `\n\`\`\`\n${codeText}\n\`\`\`\n`;
-    } else if (block.tagName === 'CODE') {
-      markdown = `\`${block.innerText}\``;
-    }
-    codeBlockData.push(markdown);
-    block.replaceWith(document.createTextNode(placeholder));
-  });
+  let codeBlockIndex = 0;
+  
+  function processCodeBlocks(element) {
+    // Find all pre and code elements
+    const blocks = element.querySelectorAll('pre, code');
+    const processed = new Set();
+    
+    blocks.forEach((block) => {
+      if (processed.has(block)) return;
+      
+      // If it's a code inside a pre, only process the pre
+      if (block.tagName === 'CODE' && block.closest('pre')) {
+        const parentPre = block.closest('pre');
+        if (blocks.includes(parentPre)) {
+          return; 
+        }
+      }
+
+      const placeholder = `__CODE_BLOCK_${codeBlockIndex}__`;
+      let markdown = '';
+      
+      if (block.tagName === 'PRE') {
+        const codeElement = block.querySelector('code');
+        const codeText = codeElement ? codeElement.innerText : block.innerText;
+        markdown = `\n\`\`\`\n${codeText}\n\`\`\`\n`;
+        processed.add(block);
+        // Mark nested code as processed
+        if (codeElement) processed.add(codeElement);
+      } else if (block.tagName === 'CODE') {
+        markdown = `\`${block.innerText}\``;
+        processed.add(block);
+      }
+      
+      codeBlockData.push(markdown);
+      block.replaceWith(document.createTextNode(placeholder));
+      codeBlockIndex++;
+    });
+  }
+  
+  processCodeBlocks(clonedElement);
   
   // Convert other HTML elements to Markdown
   let markdown = convertElementToMarkdown(clonedElement);
@@ -40,7 +66,7 @@ function htmlToMarkdown(element) {
 }
 
 // Function to convert HTML element to Markdown recursively
-function convertElementToMarkdown(element) {
+function convertElementToMarkdown(element, indent = '') {
   let result = '';
   
   for (const node of element.childNodes) {
@@ -49,13 +75,42 @@ function convertElementToMarkdown(element) {
     } else if (node.nodeType === Node.ELEMENT_NODE) {
       const tagName = node.tagName.toLowerCase();
       const className = node.getAttribute('class') || '';
+      const style = node.getAttribute('style') || '';
+      const ariaHidden = node.getAttribute('aria-hidden');
       const text = node.textContent;
       
-      // Skip elements with accessibility/hidden classes
-      if (className.includes('cdk-visually-hidden')) {
+      // Skip elements with accessibility/hidden classes, styles, or attributes
+      if (className.includes('cdk-visually-hidden') || 
+          style.includes('display: none') || 
+          style.includes('visibility: hidden') ||
+          ariaHidden === 'true') {
         continue;
       }
-      
+
+      // Handle LaTeX formulas
+      if (className.includes('math') || tagName === 'mjx-container' || node.querySelector('.math-tex') || node.hasAttribute('data-math')) {
+        // Try to find raw LaTeX source
+        const latexSource = node.getAttribute('data-math') ||
+                             node.querySelector('.math-tex')?.textContent || 
+                             node.getAttribute('data-latex') || 
+                             node.getAttribute('data-value') ||
+                             (node.getAttribute('aria-label') && node.getAttribute('aria-label').startsWith('LaTeX') ? 
+                              node.getAttribute('aria-label').replace(/^LaTeX:\s*/, '') : null);
+        
+        if (latexSource) {
+          const isBlock = tagName === 'div' || className.includes('math-block') || node.getAttribute('display') === 'block';
+          if (isBlock) {
+            // If it's a block math and we are inside a list (indent > 0), 
+            // we need to indent the block math as well to keep the list structure
+            const mathIndent = indent ? indent : '';
+            result += `\n${mathIndent}$$\n${mathIndent}${latexSource.trim()}\n${mathIndent}$$\n`;
+          } else {
+            result += `$${latexSource.trim()}$`;
+          }
+          continue;
+        }
+      }
+
       switch (tagName) {
         case 'h1':
           result += `\n# ${text}\n`;
@@ -76,7 +131,7 @@ function convertElementToMarkdown(element) {
           result += `\n###### ${text}\n`;
           break;
         case 'p':
-          result += `\n${convertElementToMarkdown(node)}\n`;
+          result += `\n${convertElementToMarkdown(node, indent)}\n`;
           break;
         case 'br':
           result += '\n';
@@ -89,15 +144,17 @@ function convertElementToMarkdown(element) {
         case 'i':
           result += `*${text}*`;
           break;
+        case 'sub':
+          result += `<sub>${text}</sub>`;
+          break;
+        case 'sup':
+          result += `<sup>${text}</sup>`;
+          break;
         case 'ul':
-          result += convertListToMarkdown(node, false);
+          result += '\n' + convertListToMarkdown(node, false, indent);
           break;
         case 'ol':
-          result += convertListToMarkdown(node, true);
-          break;
-        case 'li':
-          // This will be handled by the list converter
-          result += convertElementToMarkdown(node);
+          result += '\n' + convertListToMarkdown(node, true, indent);
           break;
         case 'a':
           const href = node.getAttribute('href');
@@ -130,7 +187,7 @@ function convertElementToMarkdown(element) {
           result += '\n' + lines.map(line => `> ${line}`).join('\n') + '\n';
           break;
         default:
-          result += convertElementToMarkdown(node);
+          result += convertElementToMarkdown(node, indent);
           break;
       }
     }
@@ -140,17 +197,69 @@ function convertElementToMarkdown(element) {
 }
 
 // Function to convert list to Markdown
-function convertListToMarkdown(listElement, isOrdered) {
-  let result = '\n';
-  const items = listElement.querySelectorAll('li');
+function convertListToMarkdown(listElement, isOrdered, indent = '') {
+  let result = '';
+  // Select li children and filter out hidden ones
+  const items = Array.from(listElement.children).filter(child => {
+    if (child.tagName !== 'LI') return false;
+    
+    const className = child.getAttribute('class') || '';
+    const style = child.getAttribute('style') || '';
+    const ariaHidden = child.getAttribute('aria-hidden');
+    
+    if (className.includes('cdk-visually-hidden') || 
+        style.includes('display: none') || 
+        style.includes('visibility: hidden') ||
+        ariaHidden === 'true') {
+      return false;
+    }
+    return true;
+  });
   
   items.forEach((item, index) => {
     const prefix = isOrdered ? `${index + 1}. ` : '- ';
-    const itemText = convertElementToMarkdown(item).trim();
-    result += `${prefix}${itemText}\n`;
+    
+    // Process the content of the list item
+    let itemContent = '';
+    for (const node of item.childNodes) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        itemContent += node.textContent;
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const tagName = node.tagName.toLowerCase();
+        const className = node.getAttribute('class') || '';
+        const style = node.getAttribute('style') || '';
+        const ariaHidden = node.getAttribute('aria-hidden');
+        
+        // Skip hidden elements inside LI
+        if (className.includes('cdk-visually-hidden') || 
+            style.includes('display: none') || 
+            style.includes('visibility: hidden') ||
+            ariaHidden === 'true') {
+          continue;
+        }
+
+        if (tagName === 'ul') {
+            // Ensure nested list starts on a new line
+            if (!itemContent.endsWith('\n') && itemContent.trim() !== '') itemContent += '\n';
+            itemContent += convertListToMarkdown(node, false, indent + '  ');
+          } else if (tagName === 'ol') {
+            // Ensure nested list starts on a new line
+            if (!itemContent.endsWith('\n') && itemContent.trim() !== '') itemContent += '\n';
+            itemContent += convertListToMarkdown(node, true, indent + '  ');
+          } else {
+          itemContent += convertElementToMarkdown(node, indent + '  ');
+        }
+      }
+    }
+    
+    // Clean up leading and trailing newlines but preserve indentation
+    // We only want to remove newlines at the start and end of the item content
+    itemContent = itemContent.replace(/^\n+|\n+$/g, '');
+    
+    result += `${indent}${prefix}${itemContent}\n`;
   });
   
-  return result + '\n';
+  return result;
 }
 
 // Function to convert table to Markdown
@@ -296,8 +405,30 @@ function downgradeHeaders(text) {
 
 // Function to clean up multiple consecutive empty lines
 function cleanupMultipleEmptyLines(text) {
-  // Replace multiple consecutive empty lines with a single empty line
-  return text.replace(/\n\s*\n\s*\n+/g, '\n\n');
+  // 1. Normalize line endings to \n
+  text = text.replace(/\r\n/g, '\n');
+
+  // 2. Remove all lines that are purely whitespace
+  text = text.replace(/^[ \t\u00a0\u1680\u180e\u2000-\u200a\u202f\u205f\u3000\ufeff]+$/gm, '');
+
+  // 3. Aggressively collapse ALL multiple newlines into a single newline
+  // This removes all empty lines from the document
+  text = text.replace(/\n\n+/g, '\n');
+
+  // 4. Restore necessary structural empty lines for Markdown validity and readability
+  // - Before headers (H1-H6)
+  text = text.replace(/\n(#+ )/g, '\n\n$1');
+  
+  // - Before horizontal rules
+  text = text.replace(/\n(---)/g, '\n\n$1');
+  
+  // - Before metadata block
+  text = text.replace(/\n(\*\*Source:\*\*)/g, '\n\n$1');
+  
+  // - Between User and Gemini turns (H2 headers)
+  text = text.replace(/\n(## (User|Gemini))/g, '\n\n$1');
+
+  return text.trim();
 }
 
 // Function to convert chat data to Markdown
@@ -305,9 +436,16 @@ function convertToMarkdown(chatData) {
   let markdown = '';
 
   // Extract title and creation time from the page
-  // Extract title from document.title and clean it for filename usage
-  let title = document.title.replace(/\s*-\s*Gemini$/i, '').trim(); // Remove " - Gemini" suffix
-  // Remove "Gemini" prefix if it exists (including "Gemini_" and "Gemini ")
+  // Try to get title from H1 first
+  const h1Element = document.querySelector('h1');
+  let title = h1Element ? h1Element.innerText.trim() : '';
+  
+  // Fallback to document.title if H1 is not found
+  if (!title) {
+    title = document.title.replace(/\s*-\s*Gemini$/i, '').trim();
+  }
+  
+  // Clean title for filename usage
   title = title.replace(/^Gemini[_\s-]*/i, '').trim();
   if (!title) {
     title = 'Gemini Chat Record';
